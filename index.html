@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Share — Post photos, comment, chat</title>
+  <meta name="description" content="Share — a demo HTML5 social platform (client-side)." />
+  <!-- Example canonical/proper URL (replace with your real domain when deploying) -->
+  <link rel="canonical" href="https://www.share.example.com/" />
+  <style>
+    :root{
+      --purple:#6b21a8;
+      --yellow:#facc15;
+      --bg:#faf5ff;
+      --muted:#6b7280;
+    }
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#fff);color:#111}
+    header{background:linear-gradient(90deg,var(--purple),#7c3aed);color:white;padding:12px 18px;display:flex;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:44px;height:44px;border-radius:8px;background:radial-gradient(circle at 20% 30%,var(--yellow),transparent 40%),rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-weight:700}
+    .urlbar{background:rgba(255,255,255,0.12);padding:8px 12px;border-radius:999px;font-size:14px}
+    main{padding:18px;max-width:1000px;margin:18px auto}
+    .card{background:white;border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(99,102,241,0.08);}
+
+    /* layout */
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
+    .feed{display:flex;flex-direction:column;gap:14px}
+    .post{border-radius:12px;overflow:hidden}
+    .post .meta{display:flex;gap:10px;align-items:center;padding:10px}
+    .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(180deg,var(--purple),#a78bfa);display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    .post img{width:100%;display:block}
+    .controls{display:flex;gap:8px;padding:10px}
+    .btn{background:var(--purple);color:white;padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+    .btn.secondary{background:transparent;color:var(--purple);border:2px solid rgba(107,33,168,0.12)}
+    .input{padding:10px;border-radius:8px;border:1px solid #eee;width:100%}
+    .comment-list{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+    .comment{background:#f8f5ff;padding:8px;border-radius:8px}
+    aside.card{position:sticky;top:18px}
+    .chat-window{height:360px;overflow:auto;padding:10px;background:#fff6d6;border-radius:10px}
+    .chat-msg{padding:8px;border-radius:8px;margin-bottom:8px}
+    .chat-msg.me{background:rgba(107,33,168,0.08);align-self:flex-end}
+    .bot-msg{background:#fffbe6}
+
+    /* small screens */
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr}
+      aside.card{position:static}
+    }
+
+    /* login */
+    .center{max-width:420px;margin:50px auto}
+    .linklike{color:var(--purple);cursor:pointer;text-decoration:underline}
+    .small{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">S</div>
+      <div>
+        <div style="font-weight:700">Share</div>
+        <div style="font-size:12px">Post photos • Comment • Chat • AI</div>
+      </div>
+    </div>
+
+    <div style="flex:1"></div>
+    <!-- visible example of a "proper URL" as requested -->
+    <div class="urlbar">https://www.share.example.com</div>
+  </header>
+
+  <main id="app">
+    <!-- Login / Register views are handled via JS single-page app routing (hash-based) -->
+
+    <!-- Login page -->
+    <section id="login-view" style="display:none" class="card center">
+      <h2>Welcome back to Share</h2>
+      <p class="small">Sign in with your email and password. This demo stores everything locally in your browser (localStorage).</p>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <input id="login-email" class="input" placeholder="Email address" type="email" />
+        <input id="login-password" class="input" placeholder="Password" type="password" />
+        <button id="login-btn" class="btn">Sign in</button>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="small">Don't have an account? <span id="go-register" class="linklike">Register</span></div>
+          <div id="demo-account" class="small linklike">Use demo account</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Register page -->
+    <section id="register-view" style="display:none" class="card center">
+      <h2>Create an account</h2>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <input id="reg-email" class="input" placeholder="Email address" type="email" />
+        <input id="reg-password" class="input" placeholder="Password (min 6 chars)" type="password" />
+        <input id="reg-name" class="input" placeholder="Display name" type="text" />
+        <button id="register-btn" class="btn">Create account</button>
+        <div class="small">By creating an account you agree to this demo's local-only storage. <span id="go-login" class="linklike">Sign in</span></div>
+      </div>
+    </section>
+
+    <!-- Main app view -->
+    <section id="main-view" style="display:none">
+      <div class="grid">
+        <div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div class="avatar" id="top-avatar">U</div>
+              <div style="flex:1">
+                <div id="top-name" style="font-weight:700">Your name</div>
+                <div class="small" id="top-email">you@example.com</div>
+              </div>
+              <div>
+                <button id="logout-btn" class="btn secondary">Logout</button>
+              </div>
+            </div>
+
+            <hr style="margin:12px 0;border:none;border-top:1px solid #f1ecff" />
+
+            <div style="display:flex;gap:10px;align-items:center">
+              <input id="new-post-text" class="input" placeholder="What's happening? Add a caption..." />
+              <input type="file" id="new-post-image" accept="image/*" />
+              <button id="create-post" class="btn">Post</button>
+            </div>
+          </div>
+
+          <div class="feed" id="feed"></div>
+        </div>
+
+        <aside class="card">
+          <h3>Chat</h3>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="chat-input" class="input" placeholder="Send a message to the room..." />
+            <button id="chat-send" class="btn">Send</button>
+          </div>
+          <div class="chat-window" id="chat-window"></div>
+
+          <hr style="margin:12px 0;border:none;border-top:1px solid #f1ecff" />
+
+          <h3>AI Assistant</h3>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <input id="ai-input" class="input" placeholder="Ask the AI (demo offline bot)..." />
+            <button id="ai-send" class="btn">Ask</button>
+          </div>
+          <div class="chat-window" id="ai-window"></div>
+        </aside>
+      </div>
+    </section>
+
+    <footer style="text-align:center;margin-top:20px;color:var(--muted);font-size:13px">This is a client-only demo. Replace localStorage calls with server endpoints when deploying.</footer>
+  </main>
+
+  <script>
+    /* --------------------------- Simple client-side social demo ---------------------------
+       Notes and limitations (please read):
+       - This is a single-file HTML demo. All data is stored locally in the browser (localStorage).
+       - It's NOT secure for production: password storage is plain text and there is no server.
+       - To deploy as a real site you must add a backend (user auth, database, storage for images) and host on a real domain (e.g. https://www.yourdomain.com).
+       - The "AI Assistant" is an offline demo rule-based bot. Replace with a call to a real LLM API for true AI.
+    */
+
+    // --------- Utilities ---------
+    function qs(sel){return document.querySelector(sel)}
+    function qsa(sel){return Array.from(document.querySelectorAll(sel))}
+    function uid(){return Math.random().toString(36).slice(2,9)}
+
+    // --------- Simple storage helpers ---------
+    const DB={
+      users: JSON.parse(localStorage.getItem('share_users')||'{}'), // {email: {name, email, password}}
+      posts: JSON.parse(localStorage.getItem('share_posts')||'[]') // [{id,authorEmail,authorName,avatar,dataUrl,caption,comments:[{name,text}]}]
+    }
+    function saveDB(){localStorage.setItem('share_users', JSON.stringify(DB.users)); localStorage.setItem('share_posts', JSON.stringify(DB.posts));}
+
+    // --------- Routing ---------
+    function showView(id){['login-view','register-view','main-view'].forEach(v=>qs('#'+v).style.display=(v===id?'block':'none'))}
+
+    // --------- Auth ---------
+    let currentUser = null
+
+    function setCurrentUser(user){currentUser=user; if(user){qs('#top-name').textContent=user.name; qs('#top-email').textContent=user.email; qs('#top-avatar').textContent=(user.name||'U')[0].toUpperCase()} else {qs('#top-name').textContent=''; qs('#top-email').textContent=''}}
+
+    function register(email,password,name){
+      if(!email||!password||password.length<6) return {ok:false,msg:'Provide valid email and password (min 6 chars)'}
+      if(DB.users[email]) return {ok:false,msg:'Account already exists'}
+      DB.users[email]={email,password,name:name||email.split('@')[0]}
+      saveDB();
+      return {ok:true}
+    }
+
+    function login(email,password){
+      const u=DB.users[email]
+      if(!u) return {ok:false,msg:'No account for that email'}
+      if(u.password!==password) return {ok:false,msg:'Wrong password'}
+      setCurrentUser(u); return {ok:true}
+    }
+
+    function logout(){setCurrentUser(null); currentUser=null; location.hash='#/login';}
+
+    // --------- Feed ---------
+    function renderFeed(){
+      const feed=qs('#feed'); feed.innerHTML=''
+      DB.posts.slice().reverse().forEach(post=>{
+        const el=document.createElement('div'); el.className='card post'
+        el.innerHTML=`
+          <div class="meta">
+            <div class="avatar">${(post.authorName||'U')[0].toUpperCase()}</div>
+            <div style="flex:1">
+              <div style="font-weight:700">${escapeHtml(post.authorName)}</div>
+              <div class="small">${escapeHtml(post.authorEmail)}</div>
+            </div>
+          </div>
+          ${post.dataUrl?`<img src="${post.dataUrl}" alt="post image"/>`:''}
+          <div style="padding:10px">${escapeHtml(post.caption||'')}</div>
+          <div class="controls">
+            <button class="btn" data-like="${post.id}">Comment</button>
+            <button class="btn secondary" data-share="${post.id}">Share URL</button>
+          </div>
+          <div style="padding:10px">
+            <div class="comment-list">${(post.comments||[]).map(c=>`<div class="comment"><strong>${escapeHtml(c.name)}</strong>: ${escapeHtml(c.text)}</div>`).join('')}</div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input class="input comment-input" data-postid="${post.id}" placeholder="Write a comment..." />
+              <button class="btn comment-send" data-postid="${post.id}">Send</button>
+            </div>
+          </div>
+        `
+        feed.appendChild(el)
+      })
+
+      // wire comment buttons
+      qsa('.comment-send').forEach(btn=>btn.addEventListener('click',e=>{
+        const id=btn.dataset.postid; const input=document.querySelector('.comment-input[data-postid="'+id+'"]')
+        if(!currentUser){alert('Sign in to comment'); return}
+        const text=input.value.trim(); if(!text) return; const p=DB.posts.find(x=>x.id===id); p.comments=p.comments||[]; p.comments.push({name:currentUser.name,text}); saveDB(); renderFeed();
+      }))
+
+      // share URL
+      qsa('[data-share]').forEach(b=>b.addEventListener('click',e=>{
+        const id=b.dataset.share; const url=location.href.split('#')[0] + '#/post/'+id
+        navigator.clipboard && navigator.clipboard.writeText(url).then(()=>alert('Post URL copied: '+url)).catch(()=>prompt('Copy this URL',url))
+      }))
+
+    }
+
+    function createPost(caption,dataUrl){
+      if(!currentUser) return alert('Sign in to post')
+      DB.posts.push({id:uid(),authorEmail:currentUser.email,authorName:currentUser.name,avatar:(currentUser.name[0]||'U'),dataUrl,caption,comments:[]})
+      saveDB(); renderFeed();
+    }
+
+    // --------- Chat (local room demo) ---------
+    const chatMessages = JSON.parse(localStorage.getItem('share_chat')||'[]')
+    function renderChat(){
+      const win=qs('#chat-window'); win.innerHTML=''
+      chatMessages.forEach(m=>{
+        const d=document.createElement('div'); d.className='chat-msg '+(m.me?'me':''); d.textContent=(m.me?('You: '):'')+m.text
+        win.appendChild(d)
+      })
+      win.scrollTop = win.scrollHeight
+    }
+    function addChat(text){chatMessages.push({text,me:!!currentUser}); localStorage.setItem('share_chat', JSON.stringify(chatMessages)); renderChat();}
+
+    // --------- AI Assistant (simple offline rule-based bot) ---------
+    function botResponse(text){
+      const t=text.trim().toLowerCase()
+      if(!t) return "Say something — I can't read silence 😄"
+      if(t.includes('hello')||t.includes('hi')) return 'Hi! I am ShareBot. Ask me about posting photos, comments, or how to deploy this demo.'
+      if(t.includes('post')||t.includes('photo')) return 'To post a photo click "Post" and pick an image. To make this production-ready, replace localStorage with a server and image storage (S3, Cloud Storage).'
+      if(t.includes('login')||t.includes('signup')||t.includes('register')) return 'Use the Register form to create an account. For real security use hashed passwords and a backend auth provider (Auth0, Firebase Auth, custom server).'
+      if(t.includes('help')||t.includes('how')) return 'I can answer a few demo questions (posting, commenting, simple deploy tips). For advanced AI replace this with an LLM API.'
+      // fallback: small creative reply
+      return "I heard: '"+text+"'. I'm a demo offline bot — you can replace me with a real AI API. Try asking 'How to deploy?'"
+    }
+
+    // --------- small helpers ---------
+    function escapeHtml(s){if(!s) return ''; return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')}
+
+    // --------- event wireup ---------
+    document.addEventListener('DOMContentLoaded',()=>{
+      // quick demo account
+      if(!DB.users['demo@share.com']){DB.users['demo@share.com']={email:'demo@share.com',password:'demopass',name:'Demo User'}; saveDB()}
+
+      // routing
+      function route(){
+        const hash=location.hash || '#/login'
+        if(hash.startsWith('#/register')){showView('register-view')}
+        else if(hash.startsWith('#/login')){showView('login-view')}
+        else if(hash.startsWith('#/main')){if(!currentUser) location.hash='#/login'; else {showView('main-view'); renderFeed(); renderChat();}}
+        else if(hash.startsWith('#/post/')){ // show single post (simple)
+          const id=hash.split('/')[2]; showView('main-view'); renderFeed(); const el=document.querySelector('[data-share]'); setTimeout(()=>{alert('Deep-linked post id: '+id + '\nThis demo does not open a separate post page, but you can search the feed.')},300)
+        } else {location.hash='#/login'}
+      }
+      window.addEventListener('hashchange',route)
+      route()
+
+      // login/register buttons
+      qs('#go-register').addEventListener('click',()=>location.hash='#/register')
+      qs('#go-login').addEventListener('click',()=>location.hash='#/login')
+
+      qs('#register-btn').addEventListener('click',()=>{
+        const email=qs('#reg-email').value.trim(); const pass=qs('#reg-password').value; const name=qs('#reg-name').value.trim();
+        const r=register(email,pass,name)
+        if(!r.ok) return alert(r.msg)
+        alert('Account created. You can now sign in.')
+        location.hash='#/login'
+      })
+
+      qs('#login-btn').addEventListener('click',()=>{
+        const email=qs('#login-email').value.trim(); const pass=qs('#login-password').value
+        const r=login(email,pass)
+        if(!r.ok) return alert(r.msg)
+        alert('Signed in as '+email)
+        location.hash='#/main'
+      })
+
+      qs('#demo-account').addEventListener('click',()=>{qs('#login-email').value='demo@share.com'; qs('#login-password').value='demopass';})
+
+      qs('#logout-btn').addEventListener('click',()=>{logout();})
+
+      // create post
+      qs('#create-post').addEventListener('click',()=>{
+        const fileInput=qs('#new-post-image'); const caption=qs('#new-post-text').value
+        if(fileInput.files && fileInput.files[0]){
+          const f=fileInput.files[0]; const reader=new FileReader(); reader.onload=()=>{createPost(caption, reader.result); qs('#new-post-text').value=''; fileInput.value=''}; reader.readAsDataURL(f)
+        } else {
+          createPost(caption,null); qs('#new-post-text').value=''
+        }
+      })
+
+      // chat
+      qs('#chat-send').addEventListener('click',()=>{const t=qs('#chat-input').value.trim(); if(!t) return; addChat(t); qs('#chat-input').value='';})
+
+      // ai
+      qs('#ai-send').addEventListener('click',()=>{const t=qs('#ai-input').value.trim(); if(!t) return; const r=botResponse(t); const win=qs('#ai-window'); const d=document.createElement('div'); d.className='chat-msg bot-msg'; d.textContent=r; win.appendChild(d); win.scrollTop=win.scrollHeight; qs('#ai-input').value='';})
+
+      // allow pressing Enter for chat & ai
+      qs('#chat-input').addEventListener('keydown',e=>{if(e.key==='Enter') qs('#chat-send').click()})
+      qs('#ai-input').addEventListener('keydown',e=>{if(e.key==='Enter') qs('#ai-send').click()})
+
+      // if there is already a signed-in 'session' in memory, set it (basic)
+      // For demo: we keep currentUser in memory only. You may choose to persist a "session" in localStorage.
+
+    })
+  </script>
+</body>
+</html>
